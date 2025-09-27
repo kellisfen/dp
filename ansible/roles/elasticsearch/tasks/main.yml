@@ -1,0 +1,56 @@
+---
+# Установка и настройка Elasticsearch
+- name: Установка Java
+  apt:
+    name: openjdk-11-jdk
+    state: present
+
+- name: Добавление GPG ключа Elasticsearch
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Добавление репозитория Elasticsearch
+  apt_repository:
+    repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+    state: present
+
+- name: Установка Elasticsearch
+  apt:
+    name: elasticsearch
+    state: present
+    update_cache: yes
+
+- name: Копирование конфигурации Elasticsearch
+  template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    backup: yes
+  notify: restart elasticsearch
+
+- name: Копирование JVM опций
+  template:
+    src: jvm.options.j2
+    dest: /etc/elasticsearch/jvm.options
+    backup: yes
+  notify: restart elasticsearch
+
+- name: Разрешение портов через файрвол
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  with_items:
+    - '9200'
+    - '9300'
+
+- name: Запуск и включение Elasticsearch
+  service:
+    name: elasticsearch
+    state: started
+    enabled: yes
+
+- name: Ожидание запуска Elasticsearch
+  wait_for:
+    port: 9200
+    delay: 30

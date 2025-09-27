@@ -1,0 +1,12 @@
+Host bastion
+    HostName 158.160.99.254
+    User ubuntu
+    IdentityFile ansible/ssh_key.pem
+    StrictHostKeyChecking no
+
+Host kibana
+    HostName 10.0.1.31
+    User ubuntu
+    IdentityFile ansible/ssh_key.pem
+    ProxyJump bastion
+    StrictHostKeyChecking no

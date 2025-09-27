@@ -1,0 +1,9 @@
+server.port: 5601
+server.host: "0.0.0.0"
+elasticsearch.hosts: ["http://{{ elasticsearch_host | default('localhost') }}:9200"]
+logging.appenders.file.type: file
+logging.appenders.file.fileName: /var/log/kibana/kibana.log
+logging.appenders.file.layout.type: json
+logging.root.appenders:
+  - default
+  - file

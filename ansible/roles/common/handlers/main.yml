@@ -1,0 +1,15 @@
+---
+# Обработчики для роли common
+- name: restart ssh
+  service:
+    name: ssh
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart rsyslog
+  service:
+    name: rsyslog
+    state: restarted

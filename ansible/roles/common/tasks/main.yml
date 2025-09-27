@@ -1,0 +1,85 @@
+---
+# Общие задачи для всех серверов
+- name: Обновление кэша пакетов
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Установка базовых пакетов
+  apt:
+    name:
+      - curl
+      - wget
+      - vim
+      - htop
+      - unzip
+      - software-properties-common
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - python3-pip
+      - rsync
+    state: present
+
+- name: Настройка часового пояса
+  timezone:
+    name: "{{ timezone | default('Europe/Moscow') }}"
+
+- name: Создание пользователя для мониторинга
+  user:
+    name: monitoring
+    system: yes
+    shell: /bin/false
+    home: /var/lib/monitoring
+    create_home: no
+
+- name: Настройка SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  with_items:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+  notify: restart ssh
+
+- name: Настройка файрвола UFW
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Разрешение SSH через файрвол
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+
+- name: Настройка логротации
+  copy:
+    dest: /etc/logrotate.d/custom
+    content: |
+      /var/log/*.log {
+          daily
+          missingok
+          rotate 52
+          compress
+          delaycompress
+          notifempty
+          create 644 root root
+      }
+
+- name: Настройка лимитов системы
+  pam_limits:
+    domain: '*'
+    limit_type: "{{ item.type }}"
+    limit_item: "{{ item.item }}"
+    value: "{{ item.value }}"
+  with_items:
+    - { type: 'soft', item: 'nofile', value: '65536' }
+    - { type: 'hard', item: 'nofile', value: '65536' }
+    - { type: 'soft', item: 'nproc', value: '32768' }
+    - { type: 'hard', item: 'nproc', value: '32768' }

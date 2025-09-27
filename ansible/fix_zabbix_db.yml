@@ -1,0 +1,97 @@
+---
+- name: Fix Zabbix Database Configuration
+  hosts: monitoring
+  become: yes
+  vars:
+    mysql_root_password: "{{ vault_mysql_root_password | default('root_password') }}"
+    zabbix_db_password: "SecureZabbixPassword123!"
+    
+  tasks:
+    - name: Stop Zabbix server
+      systemd:
+        name: zabbix-server
+        state: stopped
+      ignore_errors: yes
+
+    - name: Drop existing Zabbix user
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: zabbix
+        host: localhost
+        state: absent
+      ignore_errors: yes
+
+    - name: Drop existing Zabbix database
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: zabbix
+        state: absent
+      ignore_errors: yes
+
+    - name: Create Zabbix database
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: zabbix
+        encoding: utf8mb4
+        collation: utf8mb4_bin
+        state: present
+
+    - name: Create Zabbix user
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: zabbix
+        password: "{{ zabbix_db_password }}"
+        host: localhost
+        priv: "zabbix.*:ALL"
+        state: present
+
+    - name: Update Zabbix server configuration
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^DBPassword='
+        line: "DBPassword={{ zabbix_db_password }}"
+        backup: yes
+      notify: restart zabbix-server
+
+    - name: Import Zabbix database schema
+      mysql_db:
+        login_user: zabbix
+        login_password: "{{ zabbix_db_password }}"
+        name: zabbix
+        state: import
+        target: /usr/share/zabbix-sql-scripts/mysql/server.sql.gz
+      ignore_errors: yes
+
+    - name: Start Zabbix server
+      systemd:
+        name: zabbix-server
+        state: started
+        enabled: yes
+
+    - name: Check Zabbix server status
+      systemd:
+        name: zabbix-server
+      register: zabbix_status
+
+    - name: Display Zabbix server status
+      debug:
+        msg: "Zabbix server status: {{ zabbix_status.status.ActiveState }}"
+
+    - name: Test database connection
+      command: mysql -u zabbix -p{{ zabbix_db_password }} -e "SELECT 'Connection successful' AS status;"
+      register: db_test
+      ignore_errors: yes
+
+    - name: Display database connection test result
+      debug:
+        msg: "Database connection test: {{ db_test.stdout if db_test.rc == 0 else 'Failed' }}"
+
+  handlers:
+    - name: restart zabbix-server
+      systemd:
+        name: zabbix-server
+        state: restarted

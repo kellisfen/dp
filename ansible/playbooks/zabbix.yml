@@ -1,0 +1,132 @@
+---
+- name: Install and configure Zabbix Server
+  hosts: monitoring
+  become: yes
+  vars:
+    zabbix_version: "6.4"
+    mysql_root_password: "{{ vault_mysql_root_password | default('zabbix_root_pass') }}"
+    zabbix_db_password: "{{ vault_zabbix_db_password | default('zabbix_db_pass') }}"
+
+  tasks:
+    - name: Install MySQL server
+      apt:
+        name:
+          - mysql-server
+          - mysql-client
+          - python3-pymysql
+        state: present
+
+    - name: Start and enable MySQL
+      systemd:
+        name: mysql
+        enabled: yes
+        state: started
+
+    - name: Set MySQL root password
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+
+    - name: Create MySQL configuration file
+      template:
+        src: ../templates/mysql.cnf.j2
+        dest: /root/.my.cnf
+        mode: '0600'
+
+    - name: Download Zabbix repository package
+      get_url:
+        url: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu20.04_all.deb"
+        dest: /tmp/zabbix-release.deb
+
+    - name: Install Zabbix repository
+      apt:
+        deb: /tmp/zabbix-release.deb
+        state: present
+
+    - name: Update apt cache after adding Zabbix repo
+      apt:
+        update_cache: yes
+
+    - name: Install Zabbix server and frontend
+      apt:
+        name:
+          - zabbix-server-mysql
+          - zabbix-frontend-php
+          - zabbix-apache-conf
+          - zabbix-sql-scripts
+          - zabbix-agent
+        state: present
+
+    - name: Create Zabbix database
+      mysql_db:
+        name: zabbix
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Create Zabbix database user
+      mysql_user:
+        name: zabbix
+        password: "{{ zabbix_db_password }}"
+        priv: "zabbix.*:ALL"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Import Zabbix database schema
+      mysql_db:
+        name: zabbix
+        state: import
+        target: /usr/share/zabbix-sql-scripts/mysql/server.sql.gz
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      ignore_errors: yes
+
+    - name: Configure Zabbix server
+      template:
+        src: ../templates/zabbix_server.conf.j2
+        dest: /etc/zabbix/zabbix_server.conf
+        backup: yes
+      notify: restart zabbix-server
+
+    - name: Configure PHP for Zabbix
+      lineinfile:
+        path: /etc/zabbix/apache.conf
+        regexp: '# php_value date.timezone'
+        line: '        php_value date.timezone Europe/Moscow'
+      notify: restart apache2
+
+    - name: Enable and start Zabbix services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - zabbix-server
+        - zabbix-agent
+        - apache2
+
+    - name: Open firewall for Zabbix web interface
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+
+    - name: Open firewall for Zabbix server
+      ufw:
+        rule: allow
+        port: '10051'
+        proto: tcp
+
+  handlers:
+    - name: restart zabbix-server
+      systemd:
+        name: zabbix-server
+        state: restarted
+
+    - name: restart apache2
+      systemd:
+        name: apache2
+        state: restarted

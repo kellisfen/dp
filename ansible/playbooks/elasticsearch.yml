@@ -1,0 +1,88 @@
+---
+- name: Install and configure Elasticsearch
+  hosts: elasticsearch.ru-central1.internal
+  become: yes
+  vars:
+    elasticsearch_version: "8.11.0"
+    elasticsearch_heap_size: "1g"
+
+  tasks:
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Add Elasticsearch GPG key
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+
+    - name: Add Elasticsearch repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Elasticsearch
+      apt:
+        name: elasticsearch
+        state: present
+
+    - name: Configure Elasticsearch
+      template:
+        src: ../templates/elasticsearch.yml.j2
+        dest: /etc/elasticsearch/elasticsearch.yml
+        backup: yes
+      notify: restart elasticsearch
+
+    - name: Configure Elasticsearch JVM options
+      template:
+        src: ../templates/jvm.options.j2
+        dest: /etc/elasticsearch/jvm.options
+        backup: yes
+      notify: restart elasticsearch
+
+    - name: Create Elasticsearch data directory
+      file:
+        path: /var/lib/elasticsearch
+        state: directory
+        owner: elasticsearch
+        group: elasticsearch
+        mode: '0755'
+
+    - name: Enable and start Elasticsearch
+      systemd:
+        name: elasticsearch
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Wait for Elasticsearch to start
+      wait_for:
+        port: 9200
+        host: localhost
+        delay: 30
+        timeout: 300
+
+    - name: Open firewall for Elasticsearch
+      ufw:
+        rule: allow
+        port: '9200'
+        proto: tcp
+        src: '10.0.0.0/8'
+
+    - name: Open firewall for Elasticsearch cluster communication
+      ufw:
+        rule: allow
+        port: '9300'
+        proto: tcp
+        src: '10.0.0.0/8'
+
+  handlers:
+    - name: restart elasticsearch
+      systemd:
+        name: elasticsearch
+        state: restarted

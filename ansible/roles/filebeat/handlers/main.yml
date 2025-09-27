@@ -1,0 +1,15 @@
+---
+- name: restart filebeat
+  service:
+    name: filebeat
+    state: restarted
+
+- name: start filebeat
+  service:
+    name: filebeat
+    state: started
+
+- name: stop filebeat
+  service:
+    name: filebeat
+    state: stopped

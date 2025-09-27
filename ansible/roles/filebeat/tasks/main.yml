@@ -1,0 +1,38 @@
+---
+# Установка и настройка Filebeat
+- name: Добавление GPG ключа Elasticsearch
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Добавление репозитория Elasticsearch
+  apt_repository:
+    repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+    state: present
+
+- name: Установка Filebeat
+  apt:
+    name: filebeat
+    state: present
+    update_cache: yes
+
+- name: Копирование конфигурации Filebeat
+  template:
+    src: filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+    backup: yes
+  notify: restart filebeat
+
+- name: Включение модулей Filebeat
+  command: filebeat modules enable system nginx
+  notify: restart filebeat
+
+- name: Настройка индексов Filebeat
+  command: filebeat setup --index-management -E output.logstash.enabled=false -E 'output.elasticsearch.hosts=["{{ elasticsearch_host }}:9200"]'
+  ignore_errors: yes
+
+- name: Запуск и включение Filebeat
+  service:
+    name: filebeat
+    state: started
+    enabled: yes

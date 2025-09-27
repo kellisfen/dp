@@ -1,0 +1,233 @@
+groups:
+  - name: use.cpu
+    rules:
+      # CPU Utilization Alerts
+      - alert: HighCPUUtilization
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: utilization
+          resource: cpu
+        annotations:
+          summary: "High CPU utilization on {{ $labels.instance }}"
+          description: "CPU utilization is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: CriticalCPUUtilization
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: utilization
+          resource: cpu
+        annotations:
+          summary: "Critical CPU utilization on {{ $labels.instance }}"
+          description: "CPU utilization is {{ $value }}% on {{ $labels.instance }} for more than 2 minutes."
+
+      # CPU Saturation Alerts
+      - alert: HighCPUSaturation
+        expr: node_load1 / count by (instance) (node_cpu_seconds_total{mode="idle"}) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          category: saturation
+          resource: cpu
+        annotations:
+          summary: "High CPU saturation on {{ $labels.instance }}"
+          description: "Load average is {{ $value }} per CPU core on {{ $labels.instance }} for more than 10 minutes."
+
+      - alert: CriticalCPUSaturation
+        expr: node_load1 / count by (instance) (node_cpu_seconds_total{mode="idle"}) > 3
+        for: 5m
+        labels:
+          severity: critical
+          category: saturation
+          resource: cpu
+        annotations:
+          summary: "Critical CPU saturation on {{ $labels.instance }}"
+          description: "Load average is {{ $value }} per CPU core on {{ $labels.instance }} for more than 5 minutes."
+
+      # CPU Errors Alerts
+      - alert: HighContextSwitches
+        expr: irate(node_context_switches_total[5m]) > 50000
+        for: 15m
+        labels:
+          severity: warning
+          category: errors
+          resource: cpu
+        annotations:
+          summary: "High context switches on {{ $labels.instance }}"
+          description: "Context switches rate is {{ $value }}/sec on {{ $labels.instance }} for more than 15 minutes."
+
+  - name: use.memory
+    rules:
+      # Memory Utilization Alerts
+      - alert: HighMemoryUtilization
+        expr: 100 * (1 - ((node_memory_MemAvailable_bytes or node_memory_MemFree_bytes) / node_memory_MemTotal_bytes)) > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: utilization
+          resource: memory
+        annotations:
+          summary: "High memory utilization on {{ $labels.instance }}"
+          description: "Memory utilization is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: CriticalMemoryUtilization
+        expr: 100 * (1 - ((node_memory_MemAvailable_bytes or node_memory_MemFree_bytes) / node_memory_MemTotal_bytes)) > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: utilization
+          resource: memory
+        annotations:
+          summary: "Critical memory utilization on {{ $labels.instance }}"
+          description: "Memory utilization is {{ $value }}% on {{ $labels.instance }} for more than 2 minutes."
+
+      # Memory Saturation Alerts
+      - alert: MemorySaturation
+        expr: irate(node_vmstat_pswpin[5m]) > 0 or irate(node_vmstat_pswpout[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: saturation
+          resource: memory
+        annotations:
+          summary: "Memory saturation detected on {{ $labels.instance }}"
+          description: "Swap activity detected on {{ $labels.instance }} - system is using swap memory."
+
+      # Memory Errors Alerts
+      - alert: MemoryErrors
+        expr: increase(node_edac_correctable_errors_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: errors
+          resource: memory
+        annotations:
+          summary: "Memory errors detected on {{ $labels.instance }}"
+          description: "{{ $value }} correctable memory errors detected on {{ $labels.instance }} in the last hour."
+
+      - alert: CriticalMemoryErrors
+        expr: increase(node_edac_uncorrectable_errors_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: errors
+          resource: memory
+        annotations:
+          summary: "Critical memory errors detected on {{ $labels.instance }}"
+          description: "{{ $value }} uncorrectable memory errors detected on {{ $labels.instance }} in the last hour."
+
+  - name: use.disk
+    rules:
+      # Disk Utilization Alerts
+      - alert: HighDiskUtilization
+        expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/",fstype!="rootfs"} * 100) / node_filesystem_size_bytes{mountpoint="/",fstype!="rootfs"}) > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: utilization
+          resource: disk
+        annotations:
+          summary: "High disk utilization on {{ $labels.instance }}"
+          description: "Disk utilization is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: CriticalDiskUtilization
+        expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/",fstype!="rootfs"} * 100) / node_filesystem_size_bytes{mountpoint="/",fstype!="rootfs"}) > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: utilization
+          resource: disk
+        annotations:
+          summary: "Critical disk utilization on {{ $labels.instance }}"
+          description: "Disk utilization is {{ $value }}% on {{ $labels.instance }} for more than 2 minutes."
+
+      # Disk Saturation Alerts
+      - alert: HighDiskSaturation
+        expr: irate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: saturation
+          resource: disk
+        annotations:
+          summary: "High disk saturation on {{ $labels.instance }}"
+          description: "Disk I/O utilization is {{ $value }}% on {{ $labels.instance }} for more than 10 minutes."
+
+      # Disk Errors Alerts
+      - alert: DiskErrors
+        expr: increase(node_disk_read_errors_total[1h]) > 0 or increase(node_disk_write_errors_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: errors
+          resource: disk
+        annotations:
+          summary: "Disk errors detected on {{ $labels.instance }}"
+          description: "Disk I/O errors detected on {{ $labels.instance }} in the last hour."
+
+  - name: use.network
+    rules:
+      # Network Utilization Alerts
+      - alert: HighNetworkUtilization
+        expr: irate(node_network_receive_bytes_total{device!="lo"}[5m]) * 8 / 1000000 > 800 or irate(node_network_transmit_bytes_total{device!="lo"}[5m]) * 8 / 1000000 > 800
+        for: 10m
+        labels:
+          severity: warning
+          category: utilization
+          resource: network
+        annotations:
+          summary: "High network utilization on {{ $labels.instance }}"
+          description: "Network utilization is high on {{ $labels.device }} interface of {{ $labels.instance }} for more than 10 minutes."
+
+      # Network Saturation Alerts
+      - alert: NetworkSaturation
+        expr: increase(node_network_receive_drop_total{device!="lo"}[5m]) > 0 or increase(node_network_transmit_drop_total{device!="lo"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: saturation
+          resource: network
+        annotations:
+          summary: "Network saturation detected on {{ $labels.instance }}"
+          description: "Network packet drops detected on {{ $labels.device }} interface of {{ $labels.instance }}."
+
+      # Network Errors Alerts
+      - alert: NetworkErrors
+        expr: increase(node_network_receive_errs_total{device!="lo"}[5m]) > 0 or increase(node_network_transmit_errs_total{device!="lo"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: errors
+          resource: network
+        annotations:
+          summary: "Network errors detected on {{ $labels.instance }}"
+          description: "Network errors detected on {{ $labels.device }} interface of {{ $labels.instance }}."
+
+  - name: use.services
+    rules:
+      # Service Availability
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: errors
+          resource: service
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+
+      # Application Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: saturation
+          resource: application
+        annotations:
+          summary: "High response time for {{ $labels.job }}"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.job }} for more than 5 minutes."

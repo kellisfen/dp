@@ -1,0 +1,138 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'production'
+    replica: 'prometheus-1'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # Node Exporter для системных метрик
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+        - 'node-exporter:9100'
+        - '10.0.1.10:9100'  # Web server
+        - '10.0.1.11:9100'  # Database server
+        - '10.0.1.12:9100'  # Application server
+    scrape_interval: 15s
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):\d+'
+        replacement: '${1}'
+
+  # Blackbox Exporter для проверки доступности
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://web-server
+        - https://api.example.com
+        - http://database:5432
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # cAdvisor для контейнеров Docker
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets:
+        - 'cadvisor:8080'
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets:
+        - 'postgres-exporter:9187'
+    scrape_interval: 30s
+
+  # Nginx Exporter
+  - job_name: 'nginx-exporter'
+    static_configs:
+      - targets:
+        - 'nginx-exporter:9113'
+    scrape_interval: 15s
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets:
+        - 'redis-exporter:9121'
+    scrape_interval: 15s
+
+  # Application metrics (если приложение экспортирует метрики)
+  - job_name: 'application'
+    static_configs:
+      - targets:
+        - 'app:8080'
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Zabbix integration (если используется)
+  - job_name: 'zabbix'
+    static_configs:
+      - targets:
+        - 'zabbix-server:10051'
+    scrape_interval: 60s
+
+  # SNMP для сетевого оборудования
+  - job_name: 'snmp'
+    static_configs:
+      - targets:
+        - 192.168.1.1  # Router
+        - 192.168.1.2  # Switch
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: snmp-exporter:9116
+
+  # Windows Exporter (если есть Windows серверы)
+  - job_name: 'windows-exporter'
+    static_configs:
+      - targets:
+        - 'windows-server:9182'
+    scrape_interval: 30s
+
+# Конфигурация для remote write (опционально)
+remote_write:
+  - url: "http://cortex:9009/api/prom/push"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Конфигурация для remote read (опционально)
+remote_read:
+  - url: "http://cortex:9009/api/prom/read"
+    read_recent: true

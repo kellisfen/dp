@@ -1,0 +1,180 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+crash.log
+
+# Ansible
+*.retry
+.vault_pass
+.ansible_vault_pass
+ansible/group_vars/vault.yml
+ansible/host_vars/*/vault.yml
+*.vault
+
+# Yandex Cloud credentials
+authorized_key.json
+service_account_key.json
+info.txt
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+ssh_key*
+id_rsa*
+id_ed25519*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+*.tmp
+*.temp
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Конфигурационные файлы с секретами
+config.local.*
+kubeconfig
+*.kubeconfig
+
+# Сертификаты и ключи
+certificates/
+certs/
+ssl/
+tls/
+
+# Мониторинг и метрики
+grafana/data/
+prometheus/data/
+alertmanager/data/
+
+# Docker
+docker-compose.override.yml
+
+# PowerShell
+*.ps1xml
+*.psd1
+*.psm1
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Zabbix
+zabbix_agentd.log
+zabbix_server.log
+zabbix_proxy.log
+
+# Elasticsearch
+elasticsearch/data/
+elasticsearch/logs/
+
+# Kibana
+kibana/data/
+kibana/logs/
+
+# Nginx
+nginx/logs/
+nginx/cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+
+# Node.js (если используется)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Архивы
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Локальные конфигурации
+local.yml
+local.yaml
+*.local.yml
+*.local.yaml
+
+# Состояние инфраструктуры
+terraform.tfstate.backup*
+.terraform.tfstate.lock.info
+
+# Файлы с паролями и токенами
+passwords.txt
+tokens.txt
+secrets.txt
+vault_password_file
+
+# Временные файлы Ansible
+.ansible/
+ansible.log
+
+# Файлы состояния
+state/
+status/
+
+# Резервные копии
+backup/
+backups/
+*.backup.*

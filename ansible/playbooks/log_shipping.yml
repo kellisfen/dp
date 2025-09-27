@@ -1,0 +1,63 @@
+---
+- name: Install and configure Filebeat for log shipping
+  hosts: web_servers
+  become: yes
+  vars:
+    elasticsearch_host: "{{ hostvars['elasticsearch.ru-central1.internal']['ansible_default_ipv4']['address'] }}"
+    kibana_host: "{{ hostvars['kibana.ru-central1.internal']['ansible_default_ipv4']['address'] }}"
+
+  tasks:
+    - name: Add Elasticsearch GPG key
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+
+    - name: Add Elasticsearch repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Filebeat
+      apt:
+        name: filebeat
+        state: present
+
+    - name: Configure Filebeat
+      template:
+        src: ../templates/filebeat.yml.j2
+        dest: /etc/filebeat/filebeat.yml
+        backup: yes
+      notify: restart filebeat
+
+    - name: Enable Nginx module in Filebeat
+      command: filebeat modules enable nginx
+      args:
+        creates: /etc/filebeat/modules.d/nginx.yml
+
+    - name: Configure Nginx module for Filebeat
+      template:
+        src: ../templates/nginx_module.yml.j2
+        dest: /etc/filebeat/modules.d/nginx.yml
+        backup: yes
+      notify: restart filebeat
+
+    - name: Enable and start Filebeat
+      systemd:
+        name: filebeat
+        enabled: yes
+        state: started
+
+    - name: Setup Filebeat index template
+      command: filebeat setup --index-management -E output.logstash.enabled=false -E 'output.elasticsearch.hosts=["{{ elasticsearch_host }}:9200"]'
+      run_once: true
+      delegate_to: "{{ groups['web_servers'][0] }}"
+
+  handlers:
+    - name: restart filebeat
+      systemd:
+        name: filebeat
+        state: restarted

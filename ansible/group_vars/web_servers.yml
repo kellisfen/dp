@@ -1,0 +1,76 @@
+---
+# Переменные для веб-серверов
+# Дипломный проект DevOps
+
+# Настройки Nginx
+nginx_user: www-data
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+nginx_keepalive_timeout: 65
+nginx_client_max_body_size: 64m
+
+# Настройки веб-приложения
+web_root: /var/www/html
+web_user: "{{ nginx_user }}"
+web_group: "{{ nginx_user }}"
+
+# Настройки SSL/TLS
+ssl_protocols: "TLSv1.2 TLSv1.3"
+ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+ssl_prefer_server_ciphers: "off"
+
+# Настройки безопасности
+security_headers:
+  - "X-Frame-Options DENY"
+  - "X-Content-Type-Options nosniff"
+  - "X-XSS-Protection 1; mode=block"
+  - "Referrer-Policy strict-origin-when-cross-origin"
+  - "Content-Security-Policy default-src 'self'"
+
+# Настройки логирования
+nginx_access_log: /var/log/nginx/access.log
+nginx_error_log: /var/log/nginx/error.log
+log_format: |
+  '$remote_addr - $remote_user [$time_local] "$request" '
+  '$status $body_bytes_sent "$http_referer" '
+  '"$http_user_agent" "$http_x_forwarded_for"'
+
+# Настройки кэширования
+nginx_cache_path: /var/cache/nginx
+nginx_cache_levels: "1:2"
+nginx_cache_keys_zone: "web_cache:10m"
+nginx_cache_max_size: "1g"
+nginx_cache_inactive: "60m"
+
+# Настройки мониторинга
+nginx_status_enabled: true
+nginx_status_location: "/nginx_status"
+nginx_status_allow:
+  - "127.0.0.1"
+  - "{{ zabbix_server_ip }}"
+
+# Дополнительные порты для файрвола
+additional_firewall_ports:
+  - { port: "80", proto: "tcp", comment: "HTTP" }
+  - { port: "443", proto: "tcp", comment: "HTTPS" }
+
+# Настройки ротации логов
+logrotate_config:
+  - path: "{{ nginx_access_log }}"
+    options:
+      - daily
+      - missingok
+      - rotate 52
+      - compress
+      - delaycompress
+      - notifempty
+      - create 644 www-data adm
+  - path: "{{ nginx_error_log }}"
+    options:
+      - daily
+      - missingok
+      - rotate 52
+      - compress
+      - delaycompress
+      - notifempty
+      - create 644 www-data adm

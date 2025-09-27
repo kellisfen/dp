@@ -1,0 +1,16 @@
+---
+# Обработчики для роли zabbix-agent
+- name: restart zabbix-agent
+  service:
+    name: zabbix-agent2
+    state: restarted
+
+- name: start zabbix-agent
+  service:
+    name: zabbix-agent2
+    state: started
+
+- name: stop zabbix-agent
+  service:
+    name: zabbix-agent2
+    state: stopped

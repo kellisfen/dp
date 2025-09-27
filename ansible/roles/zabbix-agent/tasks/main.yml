@@ -1,0 +1,56 @@
+---
+# Установка и настройка Zabbix Agent
+- name: Добавление репозитория Zabbix
+  apt:
+    deb: "https://repo.zabbix.com/zabbix/6.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_6.4-1+ubuntu22.04_all.deb"
+    state: present
+
+- name: Обновление кэша пакетов после добавления репозитория
+  apt:
+    update_cache: yes
+
+- name: Установка Zabbix Agent
+  apt:
+    name: zabbix-agent2
+    state: present
+
+- name: Копирование конфигурации Zabbix Agent
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agent2.conf
+    backup: yes
+    owner: root
+    group: zabbix
+    mode: '0640'
+  notify: restart zabbix-agent
+
+- name: Создание директории для пользовательских скриптов
+  file:
+    path: /etc/zabbix/scripts
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: '0755'
+
+- name: Разрешение Zabbix Agent через файрвол
+  ufw:
+    rule: allow
+    port: '10050'
+    proto: tcp
+    src: "{{ zabbix_server_ip }}"
+
+- name: Запуск и включение Zabbix Agent
+  service:
+    name: zabbix-agent2
+    state: started
+    enabled: yes
+
+- name: Проверка статуса Zabbix Agent
+  service:
+    name: zabbix-agent2
+    state: started
+  register: zabbix_agent_status
+
+- name: Вывод статуса Zabbix Agent
+  debug:
+    msg: "Zabbix Agent статус: {{ zabbix_agent_status.status }}"

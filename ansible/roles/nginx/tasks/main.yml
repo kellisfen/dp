@@ -1,0 +1,62 @@
+---
+# Установка и настройка Nginx
+- name: Установка Nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Создание директории для сайта
+  file:
+    path: /var/www/html
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Копирование конфигурации Nginx
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: yes
+  notify: restart nginx
+
+- name: Копирование конфигурации сайта по умолчанию
+  template:
+    src: default.j2
+    dest: /etc/nginx/sites-available/default
+    backup: yes
+  notify: restart nginx
+
+- name: Создание главной страницы
+  template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+    owner: www-data
+    group: www-data
+    mode: '0644'
+
+- name: Разрешение HTTP трафика через файрвол
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Разрешение HTTPS трафика через файрвол
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Запуск и включение Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Проверка статуса Nginx
+  uri:
+    url: "http://localhost"
+    method: GET
+    status_code: 200
+  retries: 3
+  delay: 5

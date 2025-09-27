@@ -1,0 +1,98 @@
+---
+# Переменные для серверов мониторинга
+# Дипломный проект DevOps
+
+# Настройки Zabbix Server
+zabbix_version: "6.4"
+zabbix_server_name: "Diplom Monitoring Server"
+zabbix_server_database: zabbix
+zabbix_db_user: zabbix
+zabbix_db_password: "{{ vault_zabbix_db_password | default('zabbix_password') }}"
+
+# Настройки MySQL для Zabbix
+mysql_root_password: "{{ vault_mysql_root_password | default('mysql_root_password') }}"
+mysql_zabbix_db: "{{ zabbix_server_database }}"
+mysql_zabbix_user: "{{ zabbix_db_user }}"
+mysql_zabbix_password: "{{ zabbix_db_password }}"
+
+# Настройки Zabbix Agent
+zabbix_agent_server: "{{ ansible_default_ipv4.address }}"
+zabbix_agent_server_active: "{{ ansible_default_ipv4.address }}"
+zabbix_agent_hostname: "{{ inventory_hostname }}"
+
+# Настройки производительности Zabbix
+zabbix_server_config:
+  StartPollers: 5
+  StartPollersUnreachable: 1
+  StartTrappers: 5
+  StartPingers: 1
+  StartDiscoverers: 1
+  StartHTTPPollers: 1
+  StartTimers: 1
+  StartEscalators: 1
+  StartAlerters: 3
+  HousekeepingFrequency: 1
+  MaxHousekeeperDelete: 5000
+  CacheSize: 8M
+  CacheUpdateFrequency: 60
+  StartDBSyncers: 4
+  HistoryCacheSize: 16M
+  HistoryIndexCacheSize: 4M
+  TrendCacheSize: 4M
+  ValueCacheSize: 8M
+  Timeout: 4
+  TrapperTimeout: 300
+  UnreachablePeriod: 45
+  UnavailableDelay: 60
+  UnreachableDelay: 15
+
+# Настройки мониторинга USE (Utilization, Saturation, Errors)
+monitoring_templates:
+  - name: "Linux by Zabbix agent"
+    description: "Базовый мониторинг Linux серверов"
+  - name: "Nginx by HTTP"
+    description: "Мониторинг веб-серверов Nginx"
+  - name: "MySQL by Zabbix agent"
+    description: "Мониторинг базы данных MySQL"
+
+# Метрики USE для мониторинга
+use_metrics:
+  utilization:
+    - cpu_usage
+    - memory_usage
+    - disk_usage
+    - network_usage
+  saturation:
+    - load_average
+    - memory_pressure
+    - disk_io_wait
+    - network_queue
+  errors:
+    - system_errors
+    - application_errors
+    - network_errors
+    - disk_errors
+
+# Настройки алертов
+alert_thresholds:
+  cpu_warning: 80
+  cpu_critical: 95
+  memory_warning: 80
+  memory_critical: 95
+  disk_warning: 80
+  disk_critical: 95
+  load_warning: 5
+  load_critical: 10
+
+# Дополнительные порты для файрвола
+additional_firewall_ports:
+  - { port: "10051", proto: "tcp", comment: "Zabbix Server" }
+  - { port: "80", proto: "tcp", comment: "Zabbix Web Interface" }
+  - { port: "3306", proto: "tcp", comment: "MySQL", src: "10.0.0.0/8" }
+
+# Настройки резервного копирования
+backup_config:
+  mysql_backup: true
+  zabbix_config_backup: true
+  backup_path: /opt/backups
+  retention_days: "{{ backup_retention_days }}"

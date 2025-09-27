@@ -1,0 +1,74 @@
+---
+# Установка и настройка Zabbix Server
+- name: Добавление репозитория Zabbix
+  apt:
+    deb: "https://repo.zabbix.com/zabbix/6.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_6.4-1+ubuntu22.04_all.deb"
+
+- name: Обновление кэша пакетов
+  apt:
+    update_cache: yes
+
+- name: Установка MySQL
+  apt:
+    name:
+      - mysql-server
+      - mysql-client
+      - python3-pymysql
+    state: present
+
+- name: Установка Zabbix Server и Frontend
+  apt:
+    name:
+      - zabbix-server-mysql
+      - zabbix-frontend-php
+      - zabbix-apache-conf
+      - zabbix-sql-scripts
+    state: present
+
+- name: Настройка MySQL для Zabbix
+  mysql_db:
+    name: zabbix
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Создание пользователя MySQL для Zabbix
+  mysql_user:
+    name: zabbix
+    password: "{{ zabbix_db_password }}"
+    priv: "zabbix.*:ALL"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Импорт схемы Zabbix
+  mysql_db:
+    name: zabbix
+    state: import
+    target: /usr/share/zabbix-sql-scripts/mysql/server.sql.gz
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  ignore_errors: yes
+
+- name: Копирование конфигурации Zabbix Server
+  template:
+    src: zabbix_server.conf.j2
+    dest: /etc/zabbix/zabbix_server.conf
+    backup: yes
+  notify: restart zabbix-server
+
+- name: Разрешение портов через файрвол
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  with_items:
+    - '80'
+    - '10051'
+
+- name: Запуск сервисов
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - mysql
+    - zabbix-server
+    - apache2

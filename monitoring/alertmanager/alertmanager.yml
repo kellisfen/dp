@@ -1,0 +1,170 @@
+global:
+  # Глобальные настройки SMTP
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'monitoring@company.com'
+  smtp_auth_username: 'monitoring@company.com'
+  smtp_auth_password: 'your-app-password'
+  smtp_require_tls: true
+
+  # Slack webhook URL (замените на ваш)
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+# Шаблоны для уведомлений
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Маршрутизация алертов
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default-receiver'
+  
+  routes:
+    # Критические алерты - немедленное уведомление
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      
+    # Алерты по безопасности
+    - match:
+        category: security
+      receiver: 'security-team'
+      group_wait: 0s
+      repeat_interval: 15m
+      
+    # Алерты по инфраструктуре
+    - match:
+        category: infrastructure
+      receiver: 'infrastructure-team'
+      repeat_interval: 30m
+      
+    # Алерты приложений
+    - match:
+        category: application
+      receiver: 'development-team'
+      repeat_interval: 1h
+
+# Получатели уведомлений
+receivers:
+  # Получатель по умолчанию
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'admin@company.com'
+        from: 'monitoring@company.com'
+        smarthost: 'localhost:587'
+        headers:
+          Subject: '[MONITORING] {{ .GroupLabels.alertname }}'
+        html: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+
+  # Критические алерты
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@company.com,oncall@company.com'
+        from: 'monitoring@company.com'
+        smarthost: 'localhost:587'
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+        html: |
+          🚨 КРИТИЧЕСКИЙ АЛЕРТ 🚨
+          
+          {{ range .Alerts }}
+          Алерт: {{ .Annotations.summary }}
+          Описание: {{ .Annotations.description }}
+          Время: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          Хост: {{ .Labels.instance }}
+          Сервис: {{ .Labels.job }}
+          {{ end }}
+          
+          Требуется немедленное вмешательство!
+    
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '🚨 Критический алерт'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          Хост: {{ .Labels.instance }}
+          {{ end }}
+        color: 'danger'
+    
+    # Webhook для интеграции с системами тикетинга
+    webhook_configs:
+      - url: 'http://ticketing-system/api/alerts'
+        send_resolved: true
+
+  # Команда безопасности
+  - name: 'security-team'
+    email_configs:
+      - to: 'security@company.com'
+        from: 'monitoring@company.com'
+        smarthost: 'localhost:587'
+        headers:
+          Subject: '[SECURITY] {{ .GroupLabels.alertname }}'
+        html: |
+          🔒 АЛЕРТ БЕЗОПАСНОСТИ 🔒
+          
+          {{ range .Alerts }}
+          Алерт: {{ .Annotations.summary }}
+          Описание: {{ .Annotations.description }}
+          Время: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          Хост: {{ .Labels.instance }}
+          {{ end }}
+    
+    slack_configs:
+      - channel: '#security-alerts'
+        title: '🔒 Алерт безопасности'
+        color: 'warning'
+
+  # Команда инфраструктуры
+  - name: 'infrastructure-team'
+    email_configs:
+      - to: 'infrastructure@company.com'
+        from: 'monitoring@company.com'
+        smarthost: 'localhost:587'
+        headers:
+          Subject: '[INFRA] {{ .GroupLabels.alertname }}'
+        
+    slack_configs:
+      - channel: '#infrastructure'
+        title: '⚙️ Алерт инфраструктуры'
+        color: 'warning'
+
+  # Команда разработки
+  - name: 'development-team'
+    email_configs:
+      - to: 'developers@company.com'
+        from: 'monitoring@company.com'
+        smarthost: 'localhost:587'
+        headers:
+          Subject: '[APP] {{ .GroupLabels.alertname }}'
+        
+    slack_configs:
+      - channel: '#development'
+        title: '💻 Алерт приложения'
+        color: 'warning'
+
+# Подавление алертов
+inhibit_rules:
+  # Подавлять предупреждения, если есть критические алерты
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+  # Подавлять алерты о недоступности сервиса, если хост недоступен
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['instance']

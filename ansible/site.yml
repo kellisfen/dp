@@ -1,0 +1,75 @@
+---
+# Основной playbook для настройки всей инфраструктуры
+# Дипломный проект DevOps
+
+- name: Configure all servers with common settings
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    timezone: "Europe/Moscow"
+  
+  roles:
+    - common
+  
+  tags: ['common']
+
+- name: Setup web servers
+  hosts: web_servers
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - nginx
+  
+  tags: ['web']
+
+- name: Setup Zabbix server
+  hosts: monitoring
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - zabbix-server
+  
+  tags: ['monitoring', 'zabbix']
+
+- name: Setup Elasticsearch
+  hosts: elasticsearch.ru-central1.internal
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - elasticsearch
+  
+  tags: ['logging', 'elasticsearch']
+
+- name: Setup Kibana
+  hosts: kibana.ru-central1.internal
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - kibana
+  
+  tags: ['logging', 'kibana']
+
+- name: Configure Zabbix agents on all servers
+  hosts: all:!monitoring
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - zabbix-agent
+  
+  tags: ['monitoring', 'agents']
+
+- name: Configure log shipping (Filebeat)
+  hosts: all:!logging
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - filebeat
+  
+  tags: ['logging', 'filebeat']

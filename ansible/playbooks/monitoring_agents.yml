@@ -1,0 +1,53 @@
+---
+- name: Install Zabbix agents on all servers
+  hosts: web_servers:logging
+  become: yes
+  vars:
+    zabbix_version: "6.4"
+    zabbix_server_ip: "{{ hostvars['zabbix.ru-central1.internal']['ansible_default_ipv4']['address'] }}"
+
+  tasks:
+    - name: Download Zabbix repository package
+      get_url:
+        url: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu20.04_all.deb"
+        dest: /tmp/zabbix-release.deb
+
+    - name: Install Zabbix repository
+      apt:
+        deb: /tmp/zabbix-release.deb
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Zabbix agent
+      apt:
+        name: zabbix-agent
+        state: present
+
+    - name: Configure Zabbix agent
+      template:
+        src: ../templates/zabbix_agentd.conf.j2
+        dest: /etc/zabbix/zabbix_agentd.conf
+        backup: yes
+      notify: restart zabbix-agent
+
+    - name: Enable and start Zabbix agent
+      systemd:
+        name: zabbix-agent
+        enabled: yes
+        state: started
+
+    - name: Open firewall for Zabbix agent
+      ufw:
+        rule: allow
+        port: '10050'
+        proto: tcp
+        src: "{{ zabbix_server_ip }}"
+
+  handlers:
+    - name: restart zabbix-agent
+      systemd:
+        name: zabbix-agent
+        state: restarted

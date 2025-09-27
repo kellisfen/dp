@@ -1,0 +1,41 @@
+---
+# Установка и настройка Kibana
+- name: Добавление GPG ключа Elasticsearch
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Добавление репозитория Elasticsearch
+  apt_repository:
+    repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+    state: present
+
+- name: Установка Kibana
+  apt:
+    name: kibana
+    state: present
+    update_cache: yes
+
+- name: Копирование конфигурации Kibana
+  template:
+    src: kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+    backup: yes
+  notify: restart kibana
+
+- name: Разрешение порта через файрвол
+  ufw:
+    rule: allow
+    port: '5601'
+    proto: tcp
+
+- name: Запуск и включение Kibana
+  service:
+    name: kibana
+    state: started
+    enabled: yes
+
+- name: Ожидание запуска Kibana
+  wait_for:
+    port: 5601
+    delay: 30

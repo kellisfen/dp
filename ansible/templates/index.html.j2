@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ inventory_hostname }} - Дипломный проект</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .server-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .info-item {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 3px;
+        }
+        .status {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Дипломный проект DevOps</h1>
+        <p>Добро пожаловать на веб-сервер!</p>
+        
+        <div class="server-info">
+            <h3>Информация о сервере</h3>
+            <div class="info-item">
+                <strong>Hostname:</strong> {{ inventory_hostname }}
+            </div>
+            <div class="info-item">
+                <strong>IP адрес:</strong> {{ ansible_default_ipv4.address }}
+            </div>
+            <div class="info-item">
+                <strong>Операционная система:</strong> {{ ansible_distribution }} {{ ansible_distribution_version }}
+            </div>
+            <div class="info-item">
+                <strong>Время:</strong> <span id="current-time"></span>
+            </div>
+            <div class="info-item">
+                <strong>Статус:</strong> <span class="status">Работает</span>
+            </div>
+        </div>
+        
+        <p>Этот сервер является частью отказоустойчивой инфраструктуры с мониторингом и логированием.</p>
+        
+        <div style="margin-top: 2rem; font-size: 0.9em; color: #666;">
+            <p>🔍 Мониторинг: Zabbix</p>
+            <p>📊 Логирование: ELK Stack</p>
+            <p>⚖️ Балансировка: Yandex Application Load Balancer</p>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString('ru-RU');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>

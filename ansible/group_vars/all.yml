@@ -1,0 +1,23 @@
+---
+# Common variables for all hosts
+ansible_user: ubuntu
+ansible_ssh_private_key_file: ../ssh_key.pem
+
+# Nginx configuration
+nginx_user: www-data
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+
+# Zabbix configuration
+zabbix_version: "6.4"
+
+# ELK Stack configuration
+elasticsearch_version: "8.11.0"
+kibana_version: "8.11.0"
+elasticsearch_heap_size: "1g"
+
+# Security settings
+ufw_enabled: true
+
+# Timezone
+timezone: "Europe/Moscow"
