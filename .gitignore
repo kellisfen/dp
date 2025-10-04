@@ -29,6 +29,11 @@ ssh_key*
 id_rsa*
 id_ed25519*
 
+# Specific SSH keys in project
+ansible/ssh_key.pem
+ssh_key_terraform.pem
+ssh_key.pem
+
 # IDE
 .vscode/
 .idea/
@@ -49,6 +54,10 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+
+# Test files
+test_*
+*_test.*
 
 # Environment variables
 .env
@@ -178,3 +187,34 @@ status/
 backup/
 backups/
 *.backup.*
+
+# Дополнительные чувствительные файлы
+terraform_outputs.json
+zabbix_db_options.txt
+zada4a.txt
+
+# Terraform plan файлы
+tfplan
+*.tfplan
+
+# JSON файлы с выводом Terraform
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.backup
+
+# Дополнительные SSH ключи
+*.pem.pub
+ssh_key_terraform.pem
+ssh_key_from_terraform.pem
+
+# Docker compose override
+docker-compose.override.yml
+docker-compose.prod.yml
+
+# Скрипты с паролями
+*_password.sh
+*_credentials.sh
+
+# Файлы с реальными IP адресами (для примера)
+# real_ips.txt
+# production_ips.txt

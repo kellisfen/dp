@@ -27,9 +27,11 @@ scrape_configs:
     static_configs:
       - targets:
         - 'node-exporter:9100'
-        - '10.0.1.10:9100'  # Web server
-        - '10.0.1.11:9100'  # Database server
-        - '10.0.1.12:9100'  # Application server
+        - '10.0.2.5:9100'   # Web server 1
+        - '10.0.3.24:9100'  # Web server 2
+        - '10.0.4.17:9100'  # Elasticsearch server
+        - '10.0.1.31:9100'  # Kibana server
+        - '10.0.1.7:9100'   # Zabbix server
     scrape_interval: 15s
     metrics_path: /metrics
     relabel_configs:
@@ -45,9 +47,11 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-        - http://web-server
-        - https://api.example.com
-        - http://database:5432
+        - http://10.0.2.5     # Web server 1
+        - http://10.0.3.24    # Web server 2
+        - http://84.201.168.191  # Load balancer
+        - http://10.0.1.31:5601  # Kibana
+        - http://10.0.4.17:9200  # Elasticsearch
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -97,7 +101,7 @@ scrape_configs:
   - job_name: 'zabbix'
     static_configs:
       - targets:
-        - 'zabbix-server:10051'
+        - '10.0.1.7:10051'  # Zabbix server
     scrape_interval: 60s
 
   # SNMP для сетевого оборудования

@@ -45,6 +45,13 @@ resource "yandex_vpc_security_group" "web_sg" {
     port              = 10050
   }
 
+  ingress {
+    protocol          = "TCP"
+    description       = "Node Exporter from Kibana"
+    security_group_id = yandex_vpc_security_group.kibana_sg.id
+    port              = 9100
+  }
+
   egress {
     protocol       = "ANY"
     description    = "All outbound traffic"
@@ -145,6 +152,20 @@ resource "yandex_vpc_security_group" "kibana_sg" {
     description    = "Kibana web interface"
     v4_cidr_blocks = ["0.0.0.0/0"]
     port           = 5601
+  }
+
+  ingress {
+    protocol       = "TCP"
+    description    = "Grafana web interface"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 3000
+  }
+
+  ingress {
+    protocol       = "TCP"
+    description    = "Prometheus web interface"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 9090
   }
 
   egress {

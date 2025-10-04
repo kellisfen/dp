@@ -1,0 +1,303 @@
+---
+- name: Install monitoring stack on Kibana server
+  hosts: kibana
+  become: yes
+  vars:
+    prometheus_version: "2.40.7"
+    grafana_version: "9.3.2"
+    node_exporter_version: "1.5.0"
+    alertmanager_version: "0.25.0"
+    blackbox_exporter_version: "0.23.0"
+    
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - wget
+          - curl
+          - tar
+          - adduser
+          - libfontconfig1
+          - apt-transport-https
+          - software-properties-common
+        state: present
+
+    - name: Create prometheus user
+      user:
+        name: prometheus
+        system: yes
+        shell: /bin/false
+        home: /var/lib/prometheus
+        createhome: no
+
+    - name: Create prometheus directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      loop:
+        - /etc/prometheus
+        - /var/lib/prometheus
+        - /var/lib/prometheus/data
+
+    - name: Download and install Prometheus
+      unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+
+    - name: Copy Prometheus binaries
+      copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Copy Prometheus console files
+      copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/etc/prometheus/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+        remote_src: yes
+      loop:
+        - consoles
+        - console_libraries
+
+    - name: Create Prometheus configuration
+      template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart prometheus
+
+    - name: Create Prometheus systemd service
+      template:
+        src: prometheus.service.j2
+        dest: /etc/systemd/system/prometheus.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart prometheus
+
+    - name: Download and install Node Exporter
+      unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Node Exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Node Exporter systemd service
+      template:
+        src: node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart node_exporter
+
+    - name: Download and install AlertManager
+      unarchive:
+        src: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Download and install Blackbox Exporter
+      unarchive:
+        src: "https://github.com/prometheus/blackbox_exporter/releases/download/v{{ blackbox_exporter_version }}/blackbox_exporter-{{ blackbox_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Create alertmanager directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      loop:
+        - /etc/alertmanager
+        - /var/lib/alertmanager
+
+    - name: Copy AlertManager binaries
+      copy:
+        src: "/tmp/alertmanager-{{ alertmanager_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+      loop:
+        - alertmanager
+        - amtool
+
+    - name: Copy Blackbox Exporter binary
+      copy:
+        src: "/tmp/blackbox_exporter-{{ blackbox_exporter_version }}.linux-amd64/blackbox_exporter"
+        dest: /usr/local/bin/blackbox_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create AlertManager configuration
+      template:
+        src: alertmanager.yml.j2
+        dest: /etc/alertmanager/alertmanager.yml
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart alertmanager
+
+    - name: Create AlertManager systemd service
+      template:
+        src: alertmanager.service.j2
+        dest: /etc/systemd/system/alertmanager.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart alertmanager
+
+    - name: Create Blackbox Exporter configuration
+      template:
+        src: blackbox.yml.j2
+        dest: /etc/prometheus/blackbox.yml
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart blackbox_exporter
+
+    - name: Create Blackbox Exporter systemd service
+      template:
+        src: blackbox_exporter.service.j2
+        dest: /etc/systemd/system/blackbox_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart blackbox_exporter
+
+    - name: Add Grafana APT key
+      apt_key:
+        url: https://packages.grafana.com/gpg.key
+        state: present
+
+    - name: Add Grafana repository
+      apt_repository:
+        repo: "deb https://packages.grafana.com/oss/deb stable main"
+        state: present
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: present
+        update_cache: yes
+
+    - name: Create Grafana configuration
+      template:
+        src: grafana.ini.j2
+        dest: /etc/grafana/grafana.ini
+        owner: grafana
+        group: grafana
+        mode: '0640'
+      notify: restart grafana
+
+    - name: Create Grafana dashboards directory
+      file:
+        path: /var/lib/grafana/dashboards
+        state: directory
+        owner: grafana
+        group: grafana
+        mode: '0755'
+
+    - name: Copy Grafana dashboards
+      template:
+        src: "{{ item }}"
+        dest: "/var/lib/grafana/dashboards/{{ item | basename | regex_replace('\\.j2$', '') }}"
+        owner: grafana
+        group: grafana
+        mode: '0644'
+      loop:
+        - grafana-dashboard-system.json.j2
+        - grafana-dashboard-nginx.json.j2
+        - grafana-dashboard-elasticsearch.json.j2
+      notify: restart grafana
+
+    - name: Configure firewall for monitoring ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "9090"  # Prometheus
+        - "3000"  # Grafana
+        - "9100"  # Node Exporter
+        - "9093"  # AlertManager
+        - "9115"  # Blackbox Exporter
+
+    - name: Start and enable monitoring services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop:
+        - prometheus
+        - node_exporter
+        - alertmanager
+        - blackbox_exporter
+        - grafana-server
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+
+    - name: restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted
+
+    - name: restart alertmanager
+      systemd:
+        name: alertmanager
+        state: restarted
+
+    - name: restart blackbox_exporter
+      systemd:
+        name: blackbox_exporter
+        state: restarted
+
+    - name: restart grafana
+      systemd:
+        name: grafana-server
+        state: restarted

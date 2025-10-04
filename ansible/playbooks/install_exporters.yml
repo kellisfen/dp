@@ -1,0 +1,184 @@
+---
+# Install Node Exporter on all servers
+- name: Install Node Exporter on all servers
+  hosts: all
+  become: yes
+  vars:
+    node_exporter_version: "1.5.0"
+  
+  tasks:
+    - name: Create prometheus user
+      user:
+        name: prometheus
+        system: yes
+        shell: /bin/false
+        home: /var/lib/prometheus
+        createhome: no
+
+    - name: Download and install Node Exporter
+      unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Node Exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Node Exporter systemd service
+      template:
+        src: node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart node_exporter
+
+    - name: Configure firewall for Node Exporter
+      ufw:
+        rule: allow
+        port: "9100"
+        proto: tcp
+
+    - name: Start and enable Node Exporter
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted
+
+# Install Nginx Exporter on web servers
+- name: Install Nginx Exporter on web servers
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_exporter_version: "0.10.0"
+  
+  tasks:
+    - name: Download and install Nginx Exporter
+      unarchive:
+        src: "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v{{ nginx_exporter_version }}/nginx-prometheus-exporter_{{ nginx_exporter_version }}_linux_amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Nginx Exporter binary
+      copy:
+        src: "/tmp/nginx-prometheus-exporter"
+        dest: /usr/local/bin/nginx_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+
+    - name: Configure Nginx from template
+      template:
+        src: ../templates/default.j2
+        dest: /etc/nginx/sites-available/default
+      notify: restart nginx
+
+    - name: Create Nginx Exporter systemd service
+      template:
+        src: nginx_exporter.service.j2
+        dest: /etc/systemd/system/nginx_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart nginx_exporter
+
+    - name: Configure firewall for Nginx Exporter
+      ufw:
+        rule: allow
+        port: "9113"
+        proto: tcp
+
+    - name: Start and enable Nginx Exporter
+      systemd:
+        name: nginx_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart nginx_exporter
+      systemd:
+        name: nginx_exporter
+        state: restarted
+
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+
+# Install Elasticsearch Exporter
+- name: Install Elasticsearch Exporter
+  hosts: elasticsearch
+  become: yes
+  vars:
+    elasticsearch_exporter_version: "1.5.0"
+  
+  tasks:
+    - name: Download and install Elasticsearch Exporter
+      unarchive:
+        src: "https://github.com/prometheus-community/elasticsearch_exporter/releases/download/v{{ elasticsearch_exporter_version }}/elasticsearch_exporter-{{ elasticsearch_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Elasticsearch Exporter binary
+      copy:
+        src: "/tmp/elasticsearch_exporter-{{ elasticsearch_exporter_version }}.linux-amd64/elasticsearch_exporter"
+        dest: /usr/local/bin/elasticsearch_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Elasticsearch Exporter systemd service
+      template:
+        src: elasticsearch_exporter.service.j2
+        dest: /etc/systemd/system/elasticsearch_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart elasticsearch_exporter
+
+    - name: Configure firewall for Elasticsearch Exporter
+      ufw:
+        rule: allow
+        port: "9114"
+        proto: tcp
+
+    - name: Start and enable Elasticsearch Exporter
+      systemd:
+        name: elasticsearch_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart elasticsearch_exporter
+      systemd:
+        name: elasticsearch_exporter
+        state: restarted

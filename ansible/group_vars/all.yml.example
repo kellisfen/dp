@@ -1,0 +1,111 @@
+# Example configuration file for Ansible variables
+# Copy this file to all.yml and replace placeholder values with your actual values
+# Command: cp all.yml.example all.yml
+
+---
+# Common variables for all hosts
+
+# SSH settings
+ansible_user: ubuntu
+ansible_ssh_private_key_file: ~/.ssh/your_ssh_key.pem
+ansible_python_interpreter: /usr/bin/python3
+
+# System settings
+ntp_enabled: true
+ntp_timezone: "Europe/Moscow"
+
+# Firewall
+ufw_enabled: true
+
+# Timezone
+timezone: "Europe/Moscow"
+
+# Infrastructure IP addresses (from Terraform outputs)
+# IMPORTANT: Replace these values with actual IP addresses after infrastructure deployment
+# Get them with command: cd terraform && terraform output
+bastion_external_ip: YOUR_BASTION_EXTERNAL_IP
+zabbix_external_ip: YOUR_ZABBIX_EXTERNAL_IP
+zabbix_internal_ip: 10.0.1.14
+kibana_external_ip: YOUR_KIBANA_EXTERNAL_IP
+kibana_internal_ip: 10.0.1.3
+load_balancer_external_ip: YOUR_LOAD_BALANCER_EXTERNAL_IP
+elasticsearch_internal_ip: 10.0.4.34
+web1_internal_ip: 10.0.2.21
+web2_internal_ip: 10.0.3.3
+
+# Network settings
+internal_network: "10.0.0.0/8"
+
+# Zabbix settings
+zabbix_version: "6.4"
+zabbix_server_host: "{{ zabbix_internal_ip }}"
+zabbix_agent_hostname: "{{ inventory_hostname }}"
+
+# Elasticsearch settings
+elasticsearch_version: "8.11.0"
+elasticsearch_http_port: 9200
+elasticsearch_transport_port: 9300
+elasticsearch_cluster_name: "diplom-cluster"
+elasticsearch_node_name: "node-1"
+elasticsearch_network_host: "0.0.0.0"
+elasticsearch_discovery_type: "single-node"
+
+# Kibana settings
+kibana_version: "8.11.0"
+kibana_port: 5601
+kibana_host: "0.0.0.0"
+kibana_elasticsearch_hosts: '["http://{{ elasticsearch_internal_ip }}:{{ elasticsearch_http_port }}"]'
+
+# Prometheus settings
+prometheus_version: "2.48.0"
+prometheus_port: 9090
+prometheus_retention_time: "15d"
+prometheus_storage_path: "/var/lib/prometheus"
+
+# Grafana settings
+grafana_version: "10.2.2"
+grafana_port: 3000
+grafana_admin_user: "admin"
+grafana_admin_password: "YOUR_SECURE_PASSWORD"  # Change this!
+
+# Node Exporter settings
+node_exporter_version: "1.7.0"
+node_exporter_port: 9100
+
+# Web server settings
+nginx_version: "latest"
+php_version: "8.1"
+web_document_root: "/var/www/html"
+
+# Backup settings
+backup_enabled: true
+backup_retention_days: 7
+backup_path: "/backup"
+
+# Logging
+log_level: "info"
+syslog_enabled: true
+
+# Security
+fail2ban_enabled: true
+ssh_port: 22
+ssh_password_authentication: false
+ssh_permit_root_login: false
+
+# Docker settings (for Grafana, Elasticsearch, Kibana)
+docker_version: "latest"
+docker_compose_version: "2.23.0"
+
+# Monitoring
+monitoring_enabled: true
+metrics_retention_days: 30
+
+# Alerting
+alerting_enabled: false
+alert_email: "admin@example.com"
+
+# Tags for resources
+project_name: "diplom"
+environment: "production"
+owner: "devops-team"
+

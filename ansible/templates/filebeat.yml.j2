@@ -35,10 +35,10 @@ setup.template.settings:
   index.codec: best_compression
 
 setup.kibana:
-  host: "{{ kibana_host }}:5601"
+  host: "{{ kibana_internal_ip }}:5601"
 
 output.elasticsearch:
-  hosts: ["{{ elasticsearch_host }}:9200"]
+  hosts: ["{{ elasticsearch_internal_ip }}:9200"]
   index: "filebeat-{{ inventory_hostname }}-%{+yyyy.MM.dd}"
 
 processors:

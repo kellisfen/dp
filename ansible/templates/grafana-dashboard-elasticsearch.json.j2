@@ -1,0 +1,101 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Elasticsearch Monitoring Dashboard",
+    "tags": ["elasticsearch", "logging", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Elasticsearch Cluster Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "elasticsearch_cluster_health_status",
+            "legendFormat": "{{cluster}} - {{color}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Elasticsearch Nodes",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "elasticsearch_cluster_health_number_of_nodes",
+            "legendFormat": "Total Nodes"
+          },
+          {
+            "expr": "elasticsearch_cluster_health_number_of_data_nodes",
+            "legendFormat": "Data Nodes"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Elasticsearch Index Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(elasticsearch_indices_indexing_index_total[5m])",
+            "legendFormat": "{{instance}} - Indexing"
+          },
+          {
+            "expr": "rate(elasticsearch_indices_search_query_total[5m])",
+            "legendFormat": "{{instance}} - Search"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Elasticsearch JVM Memory",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "elasticsearch_jvm_memory_used_bytes",
+            "legendFormat": "{{instance}} - {{area}} Used"
+          },
+          {
+            "expr": "elasticsearch_jvm_memory_max_bytes",
+            "legendFormat": "{{instance}} - {{area}} Max"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Elasticsearch Disk Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "elasticsearch_filesystem_data_size_bytes - elasticsearch_filesystem_data_free_bytes",
+            "legendFormat": "{{instance}} - Used"
+          },
+          {
+            "expr": "elasticsearch_filesystem_data_free_bytes",
+            "legendFormat": "{{instance}} - Free"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

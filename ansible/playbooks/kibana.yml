@@ -14,7 +14,7 @@
 
     - name: Add Elasticsearch repository
       apt_repository:
-        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
         state: present
 
     - name: Update apt cache
@@ -23,7 +23,7 @@
 
     - name: Install Kibana
       apt:
-        name: kibana
+        name: kibana={{ kibana_version }}
         state: present
 
     - name: Configure Kibana

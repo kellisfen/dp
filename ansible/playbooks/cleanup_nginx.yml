@@ -1,0 +1,9 @@
+- name: Clean up Nginx configuration
+  hosts: web_servers
+  become: yes
+  tasks:
+    - name: Remove all nginx_status lines
+      lineinfile:
+        path: /etc/nginx/sites-available/default
+        regexp: '.*nginx_status.*'
+        state: absent

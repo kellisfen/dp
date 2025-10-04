@@ -1,0 +1,158 @@
+---
+- name: Setup Kibana Dashboard for Web Servers Monitoring
+  hosts: kibana
+  become: yes
+  vars:
+    kibana_url: "http://{{ kibana_internal_ip }}:5601"
+    dashboard_file: "/tmp/kibana-dashboard-web-servers.json"
+  
+  tasks:
+    - name: Wait for Kibana to be ready
+      uri:
+        url: "{{ kibana_url }}/api/status"
+        method: GET
+        status_code: 200
+      register: kibana_status
+      until: kibana_status.status == 200
+      retries: 30
+      delay: 10
+      tags: [kibana, health_check]
+
+    - name: Copy dashboard configuration to Kibana server
+      template:
+        src: kibana-dashboard-web-servers.json
+        dest: "{{ dashboard_file }}"
+        mode: '0644'
+      tags: [kibana, dashboard]
+
+    - name: Create index patterns for web servers logs
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/index-pattern/filebeat-web-*"
+        method: POST
+        body_format: json
+        body:
+          attributes:
+            title: "filebeat-web-*"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]  # 409 if already exists
+      tags: [kibana, index_pattern]
+
+    - name: Create index patterns for nginx access logs
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/index-pattern/nginx-access-*"
+        method: POST
+        body_format: json
+        body:
+          attributes:
+            title: "nginx-access-*"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+      tags: [kibana, index_pattern]
+
+    - name: Create index patterns for nginx error logs
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/index-pattern/nginx-error-*"
+        method: POST
+        body_format: json
+        body:
+          attributes:
+            title: "nginx-error-*"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+      tags: [kibana, index_pattern]
+
+    - name: Import dashboard to Kibana
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/_import"
+        method: POST
+        body_format: form-multipart
+        body:
+          file:
+            filename: "dashboard.ndjson"
+            content: "{{ lookup('file', dashboard_file) }}"
+            mime_type: "application/json"
+        headers:
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+      tags: [kibana, dashboard]
+
+    - name: Create Kibana data views for monitoring
+      uri:
+        url: "{{ kibana_url }}/api/data_views/data_view"
+        method: POST
+        body_format: json
+        body:
+          data_view:
+            title: "filebeat-*"
+            name: "Web Servers Logs"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+      tags: [kibana, data_view]
+
+    - name: Set default index pattern
+      uri:
+        url: "{{ kibana_url }}/api/kibana/settings/defaultIndex"
+        method: POST
+        body_format: json
+        body:
+          value: "filebeat-*"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 400]
+      tags: [kibana, settings]
+
+    - name: Create alerting rules for web servers
+      uri:
+        url: "{{ kibana_url }}/api/alerting/rule"
+        method: POST
+        body_format: json
+        body:
+          name: "High Error Rate Alert"
+          consumer: "alerts"
+          enabled: true
+          rule_type_id: ".es-query"
+          schedule:
+            interval: "1m"
+          params:
+            index: ["filebeat-*"]
+            timeField: "@timestamp"
+            esQuery:
+              query:
+                bool:
+                  must:
+                    - match:
+                        logtype: "nginx-error"
+                  filter:
+                    - range:
+                        "@timestamp":
+                          gte: "now-5m"
+            threshold: [10]
+            thresholdComparator: ">"
+          actions: []
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+      tags: [kibana, alerting]
+
+    - name: Display Kibana access information
+      debug:
+        msg:
+          - "Kibana dashboard has been configured successfully!"
+          - "Access Kibana at: {{ kibana_url }}"
+          - "Dashboard: Web Servers Monitoring Dashboard"
+          - "Default index pattern: filebeat-*"
+      tags: [kibana, info]

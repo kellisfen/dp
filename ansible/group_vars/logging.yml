@@ -40,7 +40,7 @@ elasticsearch_jvm_options:
 kibana_version: "{{ elasticsearch_version }}"
 kibana_server_port: 5601
 kibana_server_host: "0.0.0.0"
-kibana_elasticsearch_hosts: ["http://{{ elasticsearch_host }}:{{ elasticsearch_port }}"]
+kibana_elasticsearch_hosts: ["http://{{ elasticsearch_internal_ip }}:{{ elasticsearch_http_port }}"]
 
 kibana_config:
   server.port: "{{ kibana_server_port }}"

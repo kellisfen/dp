@@ -2,64 +2,41 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    root {{ web_root | default('/var/www/html') }};
+    root /var/www/html;
     index index.html index.htm index.nginx-debian.html;
 
-    server_name {{ ansible_fqdn | default('_') }};
+    server_name _;
 
-    # Rate limiting
-    limit_req zone=api burst=20 nodelay;
-    limit_conn conn_limit_per_ip 10;
-
-    # Health check endpoint for load balancer
-    location /health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-
-    # Monitoring endpoint for Zabbix
-    location /nginx_status {
-{% for ip in nginx_status_allow | default(['127.0.0.1']) %}
-        allow {{ ip }};
-{% endfor %}
-        deny all;
-        stub_status on;
-        access_log off;
-    }
-
-    # Main location
     location / {
         try_files $uri $uri/ =404;
-        
-        # Additional security headers for main content
-        add_header X-Robots-Tag "noindex, nofollow" always;
-        add_header X-Download-Options "noopen" always;
-        add_header X-Permitted-Cross-Domain-Policies "none" always;
     }
 
-    # Security: Deny access to hidden files and directories
+    location ~ /\.ht {
+        deny all;
+    }
+
+    location ~ /\.user\.ini {
+        deny all;
+    }
+
     location ~ /\. {
         deny all;
         access_log off;
         log_not_found off;
     }
 
-    # Security: Deny access to backup and config files
     location ~* \.(bak|config|sql|fla|psd|ini|log|sh|inc|swp|dist)$ {
         deny all;
         access_log off;
         log_not_found off;
     }
 
-    # Security: Deny access to version control directories
     location ~ /\.(git|svn|hg|bzr) {
         deny all;
         access_log off;
         log_not_found off;
     }
 
-    # Cache static files with proper headers
     location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -68,7 +45,6 @@ server {
         log_not_found off;
     }
 
-    # Cache CSS and JS files
     location ~* \.(css|js)$ {
         expires 1M;
         add_header Cache-Control "public";
@@ -76,7 +52,6 @@ server {
         access_log off;
     }
 
-    # Cache fonts
     location ~* \.(woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -84,31 +59,36 @@ server {
         access_log off;
     }
 
-    # Cache other static files
     location ~* \.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz)$ {
         expires 1M;
         add_header Cache-Control "public";
         access_log off;
     }
 
-    # Gzip compression for specific file types
     location ~* \.(css|js|xml|txt)$ {
         gzip_static on;
         expires 1M;
         add_header Cache-Control "public";
     }
 
-    # Error pages
     error_page 404 /404.html;
     error_page 500 502 503 504 /50x.html;
-    
+
     location = /404.html {
-        root {{ web_root | default('/var/www/html') }};
+        root /var/www/html;
         internal;
     }
-    
+
     location = /50x.html {
-        root {{ web_root | default('/var/www/html') }};
+        root /var/www/html;
         internal;
+    }
+
+    location /nginx_status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        allow {{ ansible_default_ipv4.address }};
+        deny all;
     }
 }

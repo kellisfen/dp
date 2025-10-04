@@ -1,0 +1,9 @@
+- name: Fix Nginx configuration by removing status block
+  hosts: web_servers
+  become: yes
+  tasks:
+    - name: Remove Nginx status block
+      blockinfile:
+        path: /etc/nginx/sites-available/default
+        marker: "# {mark} NGINX STATUS BLOCK"
+        state: absent

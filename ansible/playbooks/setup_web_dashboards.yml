@@ -1,0 +1,44 @@
+---
+- name: Setup Kibana Dashboards for Web Servers
+  hosts: kibana.ru-central1.internal
+  become: yes
+  vars:
+    kibana_url: "http://localhost:5601"
+
+  tasks:
+    - name: Create index pattern for nginx access logs
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/index-pattern/nginx-access-*"
+        method: POST
+        body_format: json
+        body:
+          attributes:
+            title: "nginx-access-*"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]  # 409 if already exists
+
+    - name: Create index pattern for nginx error logs
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/index-pattern/nginx-error-*"
+        method: POST
+        body_format: json
+        body:
+          attributes:
+            title: "nginx-error-*"
+            timeFieldName: "@timestamp"
+        headers:
+          Content-Type: "application/json"
+          kbn-xsrf: "true"
+        status_code: [200, 409]
+
+    - name: Import web servers dashboard
+      uri:
+        url: "{{ kibana_url }}/api/saved_objects/_import"
+        method: POST
+        body: "{{ lookup('file', '../templates/kibana-dashboard-web-servers.json') }}"
+        headers:
+          kbn-xsrf: "true"
+        status_code: [200, 409]

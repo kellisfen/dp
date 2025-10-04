@@ -73,3 +73,17 @@
     - filebeat
   
   tags: ['logging', 'filebeat']
+
+# Install monitoring exporters on all servers
+- import_playbook: playbooks/install_exporters.yml
+
+# Install monitoring stack on Kibana server
+- import_playbook: playbooks/monitoring_on_kibana.yml
+
+- name: Setup Kibana Dashboard for Web Servers Monitoring
+  import_playbook: playbooks/kibana_dashboard.yml
+  tags: ['logging', 'kibana', 'dashboard']
+
+# Verify monitoring and logging system
+- import_playbook: playbooks/verify_monitoring.yml
+  tags: ['verify', 'monitoring', 'logging']

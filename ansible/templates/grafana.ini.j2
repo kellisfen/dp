@@ -1,0 +1,42 @@
+[server]
+http_addr = 0.0.0.0
+http_port = 3000
+domain = {{ ansible_default_ipv4.address }}
+root_url = http://{{ ansible_default_ipv4.address }}:3000/
+
+[database]
+type = sqlite3
+path = grafana.db
+
+[session]
+provider = file
+
+[analytics]
+reporting_enabled = false
+
+[security]
+admin_user = admin
+admin_password = {{ grafana_admin_password | default('admin123') }}
+secret_key = {{ grafana_secret_key | default('SW2YcwTIb9zpOOhoPsMm') }}
+
+[snapshots]
+external_enabled = false
+
+[dashboards]
+versions_to_keep = 20
+
+[alerting]
+enabled = true
+
+[explore]
+enabled = true
+
+[log]
+mode = console file
+level = info
+
+[paths]
+data = /var/lib/grafana
+logs = /var/log/grafana
+plugins = /var/lib/grafana/plugins
+provisioning = /etc/grafana/provisioning
